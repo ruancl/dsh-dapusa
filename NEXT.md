@@ -2,7 +2,7 @@
 
 > 给「创造模式」新会话。工作区 `/Users/brown/Desktop/holybless_0727`。
 > 展示名：**大菩萨实证法义**（npm 包名仍是 `dsh-dapusa`，改名只动显示名，不动安装 id）。
-> 插件包在 `dsh-dapusa/`，已 link 安装到 desktop profile 并启用（v0.4.0）。
+> 插件包在 `dsh-dapusa/`，已 link 安装到 desktop profile 并启用（v0.7.0）。
 > 改代码后：`plugin_manager set_bundle dsh-dapusa enabled=false → true`，HMR 会同时替换
 > Host 模块和客户端模块，**不用重启 DSH**（已实测）。
 
@@ -123,7 +123,7 @@ ctx.slots.inject('main', () => ctx.slots.register({
 
 ```
 dsh-dapusa/
-  package.json      # v0.4.0；dsh.bundle + dsh.client（locale / ui-layout / ui-sidebar）
+  package.json      # v0.7.0；dsh.bundle + dsh.client（locale / ui-layout / ui-sidebar）
   cordis.patch.yml  # insert id: dapusa
   index.js          # Host：practice_ask / xiaoguang_ask + /api/dapusa/chat
   engine.js         # 取法引擎 + sharedEngine()
