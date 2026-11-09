@@ -1,0 +1,11 @@
+# 本机依赖与临时文件
+node_modules/
+.DS_Store
+*.log
+
+# 私人记忆与内部档案：不随公开仓库分发
+memory/MEMORY.md
+memory/CHANGELOG.md
+memory/ARCHITECTURE.md
+memory/PROJECT.md
+memory/README.md

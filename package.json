@@ -1,0 +1,55 @@
+{
+  "name": "dsh-dapusa",
+  "version": "0.6.3",
+  "description": "大菩萨实证法义 — 依圣光临在开示取法：左侧栏「学法 / 实修 / 问小光」页面；浮在界面上的小光随机念一句短法义（间隔可设）；另外提供一个 macOS 桌面浮窗版小光——独立原生窗口，浮在所有窗口最上层，DSH 最小化后仍显示；内置记忆智能体小光（人格与记忆随包），法义问答逐字引用原文并附《篇名》日期；对话中另有 practice_ask / xiaoguang_ask / xiaoguang_desktop 工具。原文一字不改，不判定境界。",
+  "type": "module",
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "engine.js",
+    "client.js",
+    "data/*.json",
+    "memory/**",
+    "xiaoguang.js",
+    "native/**",
+    "desktop-float.js",
+    "skills/**",
+    "locale/*.json",
+    "icon.svg",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "dharma",
+    "buddhism"
+  ],
+  "license": "MIT"
+}
