@@ -15,7 +15,7 @@
 
 | 项 | 状态 |
 |---|---|
-| `dsh-dapusa` 插件包 | 已 link 安装、已启用（desktop profile），v0.4.0 |
+| `dsh-dapusa` 插件包 | 已 link 安装、已启用（desktop profile），v0.7.0 |
 | 取法引擎 `engine.js` | JS 移植，6503 段，加载 186ms；Host 内共享单例 |
 | `practice_ask` 工具 | 已注册；取法 / 拦截验证类问题实测正常 |
 | `xiaoguang_ask` 工具 | 已注册并实测：正常问题取到 3 段整段原文 + 功课；验证类问题走确定性拦截 |
