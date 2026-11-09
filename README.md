@@ -1,6 +1,6 @@
 # dsh-dapusa · 大菩萨实证法义
 
-依「圣光临在」开示（holybless.com）取法的 DSH 插件。**原文一字不改，不判定境界。**
+依「圣光临在」开示（[cmsmt.holybless.net](https://cmsmt.holybless.net)）取法的 DSH 插件。**原文一字不改，不判定境界。**
 
 ## 三样东西
 
