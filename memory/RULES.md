@@ -2,7 +2,7 @@
 
 ## 内容来源
 
-- 所有涉及圣光临在的问题，答案必须来自 holybless.com 或本地知识库
+- 所有涉及圣光临在的问题，答案必须来自 cmsmt.holybless.net 或本地知识库
 - 优先查本地语料（`holybless_paragraphs_tagged.json` → `holybless_paragraphs.json` → `holybless_epub_content.json`）
 - **不得自行编造或混入其他来源的法语段落**
 - 引用内容必须可查证，注明篇名 + 日期
