@@ -24,7 +24,7 @@
 | 「回答引原文」| 结构保证：模型只挑候选编号，代码逐字拼回原文与《篇名》日期（已用脚本核对为语料整段） |
 | 浏览器路由 `POST /api/dapusa/chat` | 已注册（未认证请求返回 401）；页面内收发待人工点开验证 |
 | 客户端界面 | 左侧栏入口 + 主面板三栏：学法 / 实修 / **问小光**（对话记录存本机） |
-| 浮动小光 | `shell.overlay` 挂一个小光精灵（聪慧灵活版：亮眼/眨眼/眼珠跟鼠标/挑眉/歪头/呆毛/飞旋光轨/飘带），随机念短法义；间隔可设（关闭/3/5/10/20/30/60 分钟，默认 10）；49 段短法义逐字核对；设置存 localStorage |
+| 浮动小光 | `shell.overlay` 挂一个小光精灵（用户提供的精灵图：白绒精灵/翅膀/金饰/灵珠 + 漂浮/呼吸光晕），随机念短法义；间隔可设（关闭/3/5/10/20/30/60 分钟，默认 10）；49 段短法义逐字核对；设置存 localStorage |
 | 桌面浮窗 | `native/float.swift` 编译出独立 macOS 浮窗进程（`NSWindow.Level.floating`），DSH 最小化后仍显示；Host 工具 `xiaoguang_desktop` + 路由 `/api/dapusa/desktop-float`；实测 layer=3、右下锚定、随气泡自动缩放 |
 | 菜单栏 + 自动浮出 | 原生端 NSStatusItem 菜单（念一句/显示收起/随机间隔/自动浮出/退出）；插件加载 2.5 秒后按 `settings.json` 的 `autoStart` 自动拉起；DSH 重启后实测自动浮出、父进程为新 Host pid、`state.json` 里 `menuBar:true` |
 | Windows 桌面浮窗 | `native/float.ps1`（PowerShell + WinForms，无需编译器）：无边框 TopMost 窗口 + 托盘图标菜单 + 眼动/眨眼/随机念诵；Host 按平台分支（darwin→swiftc，win32→powershell.exe）。**本机是 macOS，未在真机 Windows 上验证**，待用户 Windows 实测 |
@@ -64,9 +64,10 @@ ctx.slots.inject('main', () => ctx.slots.register({
   气泡 / 设置卡自己 `pointer-events:auto`，所以不会挡住应用。
 - 计时：首次 15–45 秒后出现；之后每次间隔 = 设定分钟 × (0.6–1.4) 随机，最短 45 秒；
   每次显示约 26 秒自动收起。悬停/点击会打开设置卡（间隔切换、现在念一句）。
-- 形象：`XiaoguangFigure`（client.js）画的是「灵性 · 光明 · 智慧」的光之精灵——
-  头后两重光轮、八道缓缓旋转的光束、莲花座、合掌、眉间觉知光点、呼吸光晕；
-  同时用于浮动小光（72px）与主面板页头（46px）。旧版的「圆球笑脸」已替换。
+- 形象：用用户提供的精灵图（`assets/xiaoguang.png` 全身 / `assets/xiaoguang-avatar.webp` 头像，
+  插件图标 `icon.webp`）。网页浮动小光/页头/侧栏用图片 + CSS 漂浮/呼吸光晕；
+  原生端（Swift / PowerShell）通过 Host 复制到缓存的 `figure.png` 加载，外面加光晕与轻微浮动。
+  旧的 SVG 手绘版（`DrawnXiaoGuangFigure` / PS 的 Draw-Figure）保留为图片缺失时的兜底。
 - 短法义池在 `client.js` 的 `FLOAT_QUOTES`（49 段，逐字取自 practice_core.json，脚本核对过）。
 - 想扩大法义池：从 `data/practice_core.json` 里按「42–76 字、非问答、无引号、非对话」过滤后加入。
 

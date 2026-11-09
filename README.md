@@ -16,9 +16,9 @@
 
 网页里的小光挂在 DSH 的 Web 层，DSH 一最小化就看不见了。桌面版是**另一个独立进程 + 原生窗口**：
 
-- **macOS**：`native/float.swift`（SwiftUI + AppKit）编译成一个 `NSWindow.Level.floating` 窗口，
+- **macOS**：`native/float.swift`（SwiftUI + AppKit）编译成一个 `NSWindow.Level.floating` 窗口，画的是 `assets/xiaoguang.png`，
   浮在所有普通窗口最上层、`canJoinAllSpaces`（切换桌面也都在），DSH 最小化照常显示。
-- **Windows**：`native/float.ps1`（PowerShell + WinForms，**不需要编译器**）创建一个无边框、
+- **Windows**：`native/float.ps1`（PowerShell + WinForms，**不需要编译器**）创建一个无边框、同样画 `assets/xiaoguang.png` 的
   `TopMost` 的原生窗口，同样浮在所有窗口最上层；菜单在系统托盘图标里。
 - 随机念短法义、点小光改间隔、换一句、退出——都在桌面窗口里完成。
 - **菜单栏/托盘图标**：念一句法义 / 显示·收起小光 / 随机间隔 / **DSH 启动时自动浮出** / 退出小光。
@@ -37,10 +37,11 @@
 ## 浮动小光
 
 一颗浮在界面右下角的小光精灵（挂在 `shell.overlay`，盖在所有栏上面、不挡操作）。
-形象按「灵性 · 光明 · 智慧」再往「聪慧 · 灵活」调了一版：
-亮亮的大眼睛会**眨眼**、**眼珠跟着鼠标轻轻转**、挑眉、有点调皮的微笑、歪着脑袋、头顶呆毛会动；
-身上有**飞旋的光轨**、两条飘起来的尾光、轻盈悬浮的底光，旁边还飘着一颗它好奇盯着的灵光球。
-`prefers-reduced-motion` 下所有动画静止。同一形象用在网页浮动小光、主面板页头、桌面浮窗。
+形象用用户提供的**精灵图**：白绒小精灵、大眼睛、透明翅膀、金色饰纹、头顶一颗灵珠，
+背景是柔和金白光晕（`assets/xiaoguang.png` 全身，`assets/xiaoguang-avatar.webp` 头像）。
+网页里给它加了轻微漂浮 + 呼吸光晕；页头/侧栏用头像；插件图标是同一张（`icon.webp`，256px）。
+桌面原生浮窗（macOS / Windows）也从 `assets/xiaoguang.png` 加载同一形象，外面加光晕和轻微上下浮动。
+`prefers-reduced-motion` 下动画静止。
 
 - 每隔一段**随机时间**念一句短法义，约 26 秒后自己收起来；点小光随时打开设置。
 - 间隔可设：关闭 / 3 / 5 / 10 / 20 / 30 / 60 分钟（默认 10 分钟，实际间隔在 0.6–1.4 倍之间随机）。
@@ -64,6 +65,8 @@ dsh-dapusa/
   data/             # practice_core.json（6503 段）· standards.json · practices.json
   skills/dapusa/    # 取法技能文档
   skills/xiaoguang/ # 小光技能文档
+  assets/           # 小光精灵形象（全身 + 头像，webp/png）
+  icon.webp         # 插件图标（精灵头像 256px）
   locale/{zh,en}.json  # 插件管理页显示用的 meta
   icon.svg
 ```

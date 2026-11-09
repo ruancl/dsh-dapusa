@@ -12,7 +12,8 @@ param(
     [int]$Minutes = 10,
     [int]$ParentPid = 0,
     [string]$Settings = '',
-    [string]$State = ''
+    [string]$State = '',
+    [string]$Figure = ''
 )
 
 $ErrorActionPreference = 'Continue'
@@ -75,6 +76,7 @@ $script:FigureRect = $null
 $script:BtnNextRect = $null
 $script:BtnHideRect = $null
 $script:SettingsMtime = 0
+$script:FigureImage = $null
 
 function Log-Error {
     param($ErrorRecord)
@@ -184,6 +186,11 @@ $script:Ink = [System.Drawing.Color]::FromArgb(74, 56, 31)
 $script:InkSoft = [System.Drawing.Color]::FromArgb(115, 94, 61)
 $script:Cream = [System.Drawing.Color]::FromArgb(255, 252, 244)
 $script:CreamDeep = [System.Drawing.Color]::FromArgb(249, 236, 209)
+
+# 精灵形象（Host 会把 assets/xiaoguang.png 复制到缓存并传 -Figure）
+if ($Figure -and (Test-Path -LiteralPath $Figure)) {
+    try { $script:FigureImage = [System.Drawing.Image]::FromFile($Figure) } catch { Log-Error $_ }
+}
 
 # ---------------- 绘图辅助 ----------------
 function New-RoundRect {
@@ -411,6 +418,31 @@ function Draw-Figure {
     $g.Restore($stateFigure)
 }
 
+function Draw-ImageFigure {
+    param($g, [single]$Fx, [single]$Fy, [single]$Size, [double]$T)
+    $g.Save()
+    $bob = [math]::Sin($T * 1.6) * 2.2
+    $g.TranslateTransform($Fx, [single]($Fy + $bob))
+
+    $halo = [System.Drawing.Drawing2D.GraphicsPath]::new()
+    $halo.AddEllipse([single](-6), [single](-6), [single]($Size + 12), [single]($Size + 12))
+    $haloBrush = [System.Drawing.Drawing2D.PathGradientBrush]::new($halo)
+    $haloBrush.CenterColor = [System.Drawing.Color]::FromArgb(90, 255, 232, 178)
+    $haloBrush.SurroundColors = [System.Drawing.Color[]]@([System.Drawing.Color]::FromArgb(0, 255, 220, 150))
+    $g.FillPath($haloBrush, $halo)
+    $haloBrush.Dispose(); $halo.Dispose()
+
+    $radius = $Size * 0.24
+    $clip = New-RoundRect 0 0 $Size $Size $radius
+    $g.SetClip($clip)
+    $g.DrawImage($script:FigureImage, [System.Drawing.RectangleF]::new(0, 0, $Size, $Size))
+    $g.ResetClip()
+    $pen = [System.Drawing.Pen]::new([System.Drawing.Color]::FromArgb(150, 222, 179, 102), [single]1.6)
+    $g.DrawPath($pen, $clip)
+    $pen.Dispose(); $clip.Dispose()
+    $g.Restore()
+}
+
 function Draw-All {
     param($g)
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
@@ -457,7 +489,11 @@ function Draw-All {
     $gazeX = [math]::Max(-1.15, [math]::Min(1.15, (($cp.X - $centerX) / 220.0) * 1.3))
     $gazeY = [math]::Max(-0.95, [math]::Min(0.95, (($cp.Y - $centerY) / 220.0) * 1.3))
 
-    Draw-Figure $g $fx $fy $scale $t $gazeX $gazeY
+    if ($null -ne $script:FigureImage) {
+        Draw-ImageFigure $g $fx $fy $figSize $t
+    } else {
+        Draw-Figure $g $fx $fy $scale $t $gazeX $gazeY
+    }
     $g.ResetTransform()
 }
 

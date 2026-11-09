@@ -26,6 +26,7 @@ const PLATFORM = process.platform;
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = join(HERE, 'native', 'float.swift');
 const PS_SCRIPT = join(HERE, 'native', 'float.ps1');
+const FIGURE_ASSET = join(HERE, 'assets', 'xiaoguang.png');
 const QUOTES = join(HERE, 'data', 'quotes_float.json');
 const CACHE_DIR = join(homedir(), '.dsh', 'cache', 'dsh-dapusa', 'desktop-float');
 const BINARY = join(CACHE_DIR, 'xiaoguang-float');
@@ -33,6 +34,7 @@ const PID_FILE = join(CACHE_DIR, 'xiaoguang-float.pid');
 const QUOTES_COPY = join(CACHE_DIR, 'quotes.json');
 const SETTINGS_FILE = join(CACHE_DIR, 'settings.json');
 const STATE_FILE = join(CACHE_DIR, 'state.json');
+const FIGURE_COPY = join(CACHE_DIR, 'figure.png');
 const LAUNCH_VBS = join(CACHE_DIR, 'launch-float.vbs');
 
 const DEFAULT_SETTINGS = { autoStart: true, enabled: true, minutes: 10 };
@@ -115,6 +117,7 @@ function ensureDarwinRuntime() {
       mkdirSync(CACHE_DIR, { recursive: true });
       if (!existsSync(SOURCE)) throw new Error('插件缺少 native/float.swift');
       if (!existsSync(QUOTES)) throw new Error('插件缺少 data/quotes_float.json');
+      if (!existsSync(FIGURE_ASSET)) throw new Error('插件缺少 assets/xiaoguang.png');
       const probe = spawnSync('xcrun', ['--version'], { encoding: 'utf8', timeout: 30000 });
       if (probe.error || probe.status !== 0) {
         throw new Error('没有找到 Xcode 命令行工具：请在终端运行 xcode-select --install 后再试');
@@ -132,6 +135,7 @@ function ensureDarwinRuntime() {
         }
       }
       writeFileSync(QUOTES_COPY, readFileSync(QUOTES));
+      writeFileSync(FIGURE_COPY, readFileSync(FIGURE_ASSET));
       resolve(BINARY);
     } catch (error) {
       reject(error);
@@ -150,6 +154,7 @@ function ensureWindowsRuntime() {
       mkdirSync(CACHE_DIR, { recursive: true });
       if (!existsSync(PS_SCRIPT)) throw new Error('插件缺少 native/float.ps1');
       if (!existsSync(QUOTES)) throw new Error('插件缺少 data/quotes_float.json');
+      if (!existsSync(FIGURE_ASSET)) throw new Error('插件缺少 assets/xiaoguang.png');
       const probe = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '$PSVersionTable.PSVersion.Major'], {
         encoding: 'utf8',
         timeout: 30000,
@@ -161,6 +166,7 @@ function ensureWindowsRuntime() {
         throw new Error(`PowerShell 不可用：${detail || '请检查系统策略是否禁止运行 PowerShell 脚本'}`);
       }
       writeFileSync(QUOTES_COPY, readFileSync(QUOTES));
+      writeFileSync(FIGURE_COPY, readFileSync(FIGURE_ASSET));
       resolve(PS_SCRIPT);
     } catch (error) {
       reject(error);
@@ -221,6 +227,7 @@ async function startWindows(settings) {
     '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
     '-File', `"${PS_SCRIPT}"`,
     '-Quotes', `"${QUOTES_COPY}"`,
+    '-Figure', `"${FIGURE_COPY}"`,
     '-Minutes', String(settings.minutes),
     '-ParentPid', String(process.pid),
     '-Settings', `"${SETTINGS_FILE}"`,

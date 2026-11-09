@@ -24,6 +24,9 @@ struct Quote: Codable {
     let date: String
 }
 
+/// 小光的精灵形象（由 Host 把 assets/xiaoguang.png 复制到缓存后通过 --figure 传入）
+var xgFigureImage: NSImage?
+
 // MARK: - 状态
 
 final class Model: ObservableObject {
@@ -122,7 +125,7 @@ final class Model: ObservableObject {
 
 // MARK: - 小光形象：灵性（光晕/光轮/莲花/合掌）· 光明（光束/辉光/光点）· 智慧（眉间觉知光/安住神情）
 
-struct XiaoGuangFigure: View {
+struct DrawnXiaoGuangFigure: View {
     var size: CGFloat = 84
 
     var body: some View {
@@ -323,6 +326,41 @@ struct XiaoGuangFigure: View {
         ctx.translateBy(x: point.x, y: point.y)
         ctx.rotate(by: Angle(degrees: degrees))
         ctx.translateBy(x: -point.x, y: -point.y)
+    }
+}
+
+struct XiaoGuangFigure: View {
+    var size: CGFloat = 84
+    @State private var bob = false
+
+    var body: some View {
+        Group {
+            if let image = xgFigureImage {
+                ZStack {
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [Palette.gold.opacity(0.40), Palette.gold.opacity(0.06), Palette.gold.opacity(0)],
+                            center: .center, startRadius: 2, endRadius: size * 0.55))
+                    Image(nsImage: image)
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFill()
+                        .frame(width: size * 0.94, height: size * 0.94)
+                        .clipShape(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
+                                .strokeBorder(Palette.goldDeep.opacity(0.55), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 5)
+                }
+                .frame(width: size, height: size)
+                .offset(y: bob ? -2.2 : 2.2)
+                .animation(.easeInOut(duration: 2.9).repeatForever(autoreverses: true), value: bob)
+                .onAppear { bob = true }
+            } else {
+                DrawnXiaoGuangFigure(size: size)
+            }
+        }
     }
 }
 
@@ -531,6 +569,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         if let path = value(for: "--state", in: args) {
             stateURL = URL(fileURLWithPath: path)
+        }
+        if let path = value(for: "--figure", in: args) {
+            xgFigureImage = NSImage(contentsOfFile: path)
         }
 
         var quotes: [Quote] = []
