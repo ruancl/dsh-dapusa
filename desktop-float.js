@@ -197,6 +197,7 @@ async function start(minutes) {
     BINARY,
     [
       '--quotes', QUOTES_COPY,
+      '--figure', FIGURE_COPY,
       '--minutes', String(settings.minutes),
       '--parent-pid', String(process.pid),
       '--settings', SETTINGS_FILE,
