@@ -109,15 +109,44 @@ ctx.slots.inject('main', () => ctx.slots.register({
 页面上的七把标尺、七门功课与对话里引用的段落都是**原样数据**，与 `data/*.json`、
 `data/practice_core.json` 里的 `text` 字段逐字一致（已用脚本比对）；出处为《篇名》+ 日期。
 
-## 安装（本机 profile）
+## 安装（其他用户）
+
+**推荐：从 GitHub 直接装**
+
+1. 打开 DSH 左侧栏 **插件** → **Add plugin**（添加插件）
+2. 填 Git 地址：`github:ruancl/dsh-dapusa`
+   （或 `https://github.com/ruancl/dsh-dapusa`）
+3. **Install** → 等 pnpm 装完；安装会默认启用这个 bundle
+4. 左侧栏出现「大菩萨实证法义」即可用；界面没刷新就重启一次 DSH
+
+也可以让 DSH 里的智能体装：直接说「安装插件 github:ruancl/dsh-dapusa」。
+
+**其他装法**
+
+```bash
+git clone https://github.com/ruancl/dsh-dapusa.git
+# 然后插件页 Add plugin 填这个本地目录的绝对路径
+```
+
+**装之前要知道的**
+
+- 插件装在当前 DSH profile，对所有会话生效；首次安装/升级后建议重启一次 DSH
+- 模型走 DSH 自己的模型通道，**不需要任何 API key**；模型不可用时自动退化为词面检索
+- **桌面浮窗（小光浮在桌面最上层）只支持 macOS**，需要装了 Xcode Command Line Tools
+  （首次自动用 `xcrun swiftc` 编译，约 2 秒）；「DSH 启动自动浮出」默认开，可在菜单栏或设置卡里关
+- 公开仓库只带小光人格四件套（IDENTITY/SOUL/USER/RULES），**不带私人长期记忆**；
+  想给它自己的记忆，在插件目录 `memory/MEMORY.md` 里写就行（格式照 `MEMORY.md` 条目）
+- 卸载：插件页找到 `dsh-dapusa` → 关闭 / 移除
+
+> 还没上 npm 和插件市场索引；以后会补 `npm publish` 和 Index JSON，那之后可以一键从市场装。
+
+## 安装（本机开发）
 
 ```bash
 # 插件包已 link 到 profile，改完代码：
 #   1) 在插件页把 dsh-dapusa 关掉再打开（HMR 会替换 Host 模块 + 客户端模块）
 #   2) 或重启 DSH 应用
 ```
-
-发布到插件市场见 `NEXT.md`（索引 JSON、npm publish 未做）。
 
 ## 验证状态
 
