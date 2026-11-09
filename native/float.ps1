@@ -30,6 +30,9 @@ using System.Windows.Forms;
 
 public class XgNative {
     [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+    [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+    [DllImport("gdi32.dll")] public static extern int GetDeviceCaps(IntPtr hdc, int nIndex);
 }
 
 public class XgForm : Form {
@@ -42,6 +45,18 @@ public class XgForm : Form {
 }
 '@ -ReferencedAssemblies @($script:WinFormsAssembly, $script:DrawingAssembly)
 [void][XgNative]::SetProcessDPIAware()
+
+# 布局按系统 DPI 缩放：窗户尺寸、圆角、字体一起放大，避免 200% 显示器上
+# 字体被放大而排版仍是 100% 像素，导致文字溢出、只显示半截。
+$script:Scale = 1.0
+try {
+    $hdc = [XgNative]::GetDC([IntPtr]::Zero)
+    if ($hdc -ne [IntPtr]::Zero) {
+        $dpi = [XgNative]::GetDeviceCaps($hdc, 88)  # LOGPIXELSX
+        [void][XgNative]::ReleaseDC([IntPtr]::Zero, $hdc)
+        if ($dpi -gt 0) { $script:Scale = [math]::Max(1.0, [math]::Round($dpi / 96.0, 2)) }
+    }
+} catch { }
 
 # ---------------- 运行状态 ----------------
 $script:ErrorLog = if ($State) { Join-Path ([System.IO.Path]::GetDirectoryName($State)) 'error.log' } else { Join-Path $env:TEMP 'xiaoguang-float-error.log' }
@@ -153,7 +168,10 @@ if (-not $script:FontFamily) { $script:FontFamily = 'Arial' }
 function New-UIFont {
     param([double]$Size, $Style)
     if ($null -eq $Style) { $Style = [System.Drawing.FontStyle]::Regular }
-    return [System.Drawing.Font]::new($script:FontFamily, [single]$Size, $Style)
+    # 用像素单位：字号是逻辑像素，交给 Draw-All 的 ScaleTransform 统一放大，
+    # 这样字号不会在 200% DPI 下被 GDI+ 再放大一遍。
+    $px = [single]($Size * 96.0 / 72.0)
+    return [System.Drawing.Font]::new($script:FontFamily, $px, $Style, [System.Drawing.GraphicsUnit]::Pixel)
 }
 
 $script:FontQuote = New-UIFont 10.5 $null
@@ -215,7 +233,7 @@ function Draw-Pill {
 function Draw-Figure {
     param($g, [single]$Fx, [single]$Fy, [single]$Scale, [double]$T, [double]$GazeX, [double]$GazeY)
 
-    $g.Save()
+    $stateFigure = $g.Save()
     $bob = [math]::Sin($T * 1.6) * 2.2
     $g.TranslateTransform($Fx, [single]($Fy + $bob * $Scale))
     $g.ScaleTransform($Scale, $Scale)
@@ -294,7 +312,7 @@ function Draw-Figure {
     $basePen.Dispose(); $base.Dispose()
 
     # 头（歪着）
-    $g.Save()
+    $stateHead = $g.Save()
     $tilt = -5 + [math]::Sin($T * 0.9) * 2.0
     $g.TranslateTransform(32, 28)
     $g.RotateTransform([single]$tilt)
@@ -369,7 +387,7 @@ function Draw-Figure {
     $smile.AddBezier([single]29.7, [single]32.3, [single]30.9, [single]33.8, [single]33.3, [single]34.0, [single]34.6, [single]32.6)
     $g.DrawPath($inkPen, $smile)
     $smile.Dispose(); $inkPen.Dispose()
-    $g.Restore()
+    $g.Restore($stateHead)
 
     # 好奇的灵光球
     $orbTwinkle = 0.35 + 0.65 * (0.5 + 0.5 * [math]::Sin($T * 2.1))
@@ -390,7 +408,7 @@ function Draw-Figure {
     $g.FillPath($orbSparkBrush, $orbSpark)
     $orbSparkBrush.Dispose(); $orbSpark.Dispose()
 
-    $g.Restore()
+    $g.Restore($stateFigure)
 }
 
 function Draw-All {
@@ -398,9 +416,10 @@ function Draw-All {
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
     $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
     $g.Clear($script:Form.BackColor)
+    $g.ScaleTransform([single]$script:Scale, [single]$script:Scale)
     $t = $script:Clock.Elapsed.TotalSeconds
-    $w = $script:Form.ClientSize.Width
-    $h = $script:Form.ClientSize.Height
+    $w = $script:Form.ClientSize.Width / $script:Scale
+    $h = $script:Form.ClientSize.Height / $script:Scale
 
     if ($script:BubbleVisible -and $null -ne $script:Current) {
         Draw-Card $g 12 12 ($w - 24) 200 16
@@ -431,13 +450,15 @@ function Draw-All {
     $fy = $h - $figSize - 10
     $script:FigureRect = [System.Drawing.Rectangle]::new([int]$fx, [int]$fy, [int]$figSize, [int]$figSize)
 
-    $cp = $script:Form.PointToClient([System.Windows.Forms.Cursor]::Position)
+    $cpRaw = $script:Form.PointToClient([System.Windows.Forms.Cursor]::Position)
+    $cp = [System.Drawing.Point]::new([int]($cpRaw.X / $script:Scale), [int]($cpRaw.Y / $script:Scale))
     $centerX = $fx + 32 * $scale
     $centerY = $fy + 32 * $scale
     $gazeX = [math]::Max(-1.15, [math]::Min(1.15, (($cp.X - $centerX) / 220.0) * 1.3))
     $gazeY = [math]::Max(-0.95, [math]::Min(0.95, (($cp.Y - $centerY) / 220.0) * 1.3))
 
     Draw-Figure $g $fx $fy $scale $t $gazeX $gazeY
+    $g.ResetTransform()
 }
 
 # ---------------- 窗口行为 ----------------
@@ -446,11 +467,12 @@ function Layout-For {
     $screen = [System.Windows.Forms.Screen]::PrimaryScreen
     try { if ($null -ne $script:Form -and $script:Form.Handle -ne [IntPtr]::Zero) { $screen = [System.Windows.Forms.Screen]::FromControl($script:Form) } } catch { }
     $wa = $screen.WorkingArea
-    if ($Bubble) { $w = 380; $h = 348 } else { $w = 150; $h = 150 }
-    $script:Form.Size = [System.Drawing.Size]::new($w, $h)
-    $script:Form.Location = [System.Drawing.Point]::new(($wa.Right - $w - 26), ($wa.Bottom - $h - 26))
+    $s = $script:Scale
+    if ($Bubble) { $w = 380 * $s; $h = 348 * $s } else { $w = 150 * $s; $h = 150 * $s }
+    $script:Form.Size = [System.Drawing.Size]::new([int]$w, [int]$h)
+    $script:Form.Location = [System.Drawing.Point]::new([int]($wa.Right - $w - 26 * $s), [int]($wa.Bottom - $h - 26 * $s))
     try {
-        $regionPath = New-RoundRect 0 0 $w $h 18
+        $regionPath = New-RoundRect 0 0 ([single]$w) ([single]$h) ([single](18 * $s))
         $region = [System.Drawing.Region]::new($regionPath)
         $script:Form.Region = $region
         $region.Dispose()
@@ -531,9 +553,10 @@ function Handle-Click {
     try {
         if ($e.Button -ne [System.Windows.Forms.MouseButtons]::Left) { return }
         if ($script:Dragged) { $script:Dragged = $false; return }
-        if ($null -ne $script:BtnNextRect -and $script:BtnNextRect.Contains($e.Location)) { Show-Quote; return }
-        if ($null -ne $script:BtnHideRect -and $script:BtnHideRect.Contains($e.Location)) { Hide-Quote; return }
-        if ($null -ne $script:FigureRect -and $script:FigureRect.Contains($e.Location)) { Show-Quote }
+        $lp = [System.Drawing.Point]::new([int]($e.Location.X / $script:Scale), [int]($e.Location.Y / $script:Scale))
+        if ($null -ne $script:BtnNextRect -and $script:BtnNextRect.Contains($lp)) { Show-Quote; return }
+        if ($null -ne $script:BtnHideRect -and $script:BtnHideRect.Contains($lp)) { Hide-Quote; return }
+        if ($null -ne $script:FigureRect -and $script:FigureRect.Contains($lp)) { Show-Quote }
     } catch { Log-Error $_ }
 }
 

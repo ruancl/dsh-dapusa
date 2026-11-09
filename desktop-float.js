@@ -33,6 +33,7 @@ const PID_FILE = join(CACHE_DIR, 'xiaoguang-float.pid');
 const QUOTES_COPY = join(CACHE_DIR, 'quotes.json');
 const SETTINGS_FILE = join(CACHE_DIR, 'settings.json');
 const STATE_FILE = join(CACHE_DIR, 'state.json');
+const LAUNCH_VBS = join(CACHE_DIR, 'launch-float.vbs');
 
 const DEFAULT_SETTINGS = { autoStart: true, enabled: true, minutes: 10 };
 
@@ -185,34 +186,18 @@ async function start(minutes) {
   } catch (error) {
     return { running: false, error: String((error && error.message) || error), autoStart: settings.autoStart };
   }
-  let child;
-  if (PLATFORM === 'win32') {
-    child = spawn(
-      'powershell.exe',
-      [
-        '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
-        '-File', PS_SCRIPT,
-        '-Quotes', QUOTES_COPY,
-        '-Minutes', String(settings.minutes),
-        '-ParentPid', String(process.pid),
-        '-Settings', SETTINGS_FILE,
-        '-State', STATE_FILE,
-      ],
-      { detached: true, windowsHide: true, stdio: 'ignore' },
-    );
-  } else {
-    child = spawn(
-      BINARY,
-      [
-        '--quotes', QUOTES_COPY,
-        '--minutes', String(settings.minutes),
-        '--parent-pid', String(process.pid),
-        '--settings', SETTINGS_FILE,
-        '--state', STATE_FILE,
-      ],
-      { detached: true, stdio: 'ignore' },
-    );
-  }
+  if (PLATFORM === 'win32') return startWindows(settings);
+  const child = spawn(
+    BINARY,
+    [
+      '--quotes', QUOTES_COPY,
+      '--minutes', String(settings.minutes),
+      '--parent-pid', String(process.pid),
+      '--settings', SETTINGS_FILE,
+      '--state', STATE_FILE,
+    ],
+    { detached: true, stdio: 'ignore' },
+  );
   child.unref();
   if (!child.pid) return { running: false, error: '桌面小光启动失败（没有进程 id）', autoStart: settings.autoStart };
   writeFileSync(PID_FILE, JSON.stringify({ pid: child.pid, parent: process.pid }));
@@ -221,6 +206,69 @@ async function start(minutes) {
     return { running: false, error: '桌面小光启动后立即退出了（可能是系统权限或编译产物问题）', autoStart: settings.autoStart };
   }
   return { running: true, pid: child.pid, started: true, autoStart: settings.autoStart, windowVisible: true, menuBar: true };
+}
+
+/**
+ * Windows 启动：不能由 Node 直接 spawn powershell.exe。
+ * DSH 宿主是无控制台的 GUI 进程，子进程拿不到有效的标准句柄时 PowerShell 会挂住或秒退；
+ * 而且宿主所在的子进程 job 会把游离子进程一并回收。
+ * 改由 wscript.exe（本身没有控制台）经 ShellExecute 拉起浮窗，进程脱离 job；
+ * 真正的浮窗 pid 由 float.ps1 写进 state.json，这里回读后记入 pid 文件。
+ */
+async function startWindows(settings) {
+  const args = [
+    'powershell.exe',
+    '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+    '-File', `"${PS_SCRIPT}"`,
+    '-Quotes', `"${QUOTES_COPY}"`,
+    '-Minutes', String(settings.minutes),
+    '-ParentPid', String(process.pid),
+    '-Settings', `"${SETTINGS_FILE}"`,
+    '-State', `"${STATE_FILE}"`,
+  ].join(' ');
+  const vbs = [
+    'Set sh = CreateObject("WScript.Shell")',
+    `sh.Run "${args.replace(/"/g, '""')}", 0, False`,
+  ].join('\r\n');
+  try {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(LAUNCH_VBS, `${vbs}\r\n`, 'utf8');
+    rmSync(STATE_FILE, { force: true });
+    rmSync(PID_FILE, { force: true });
+  } catch (error) {
+    return {
+      running: false,
+      error: `无法写入桌面小光启动脚本：${(error && error.message) || error}`,
+      autoStart: settings.autoStart,
+    };
+  }
+  const launcher = spawn('wscript.exe', [LAUNCH_VBS], { detached: true, windowsHide: true, stdio: 'ignore' });
+  launcher.unref();
+  const pid = await waitForStatePid(15000);
+  if (!pid) {
+    return {
+      running: false,
+      error: '桌面小光启动失败：wscript 已拉起，但没有等到浮窗进程（可能是 PowerShell 被系统策略拦截）',
+      autoStart: settings.autoStart,
+    };
+  }
+  writeFileSync(PID_FILE, JSON.stringify({ pid, parent: process.pid }));
+  return { running: true, pid, started: true, autoStart: settings.autoStart, windowVisible: true, menuBar: true };
+}
+
+/** 轮询 state.json，等到浮窗进程自己写出仍存活的 pid */
+function waitForStatePid(timeoutMs) {
+  return new Promise((resolve) => {
+    const deadline = Date.now() + timeoutMs;
+    const tick = () => {
+      const state = readJson(STATE_FILE);
+      const pid = state && Number.isInteger(state.pid) ? state.pid : 0;
+      if (pid > 0 && isAlive(pid)) return resolve(pid);
+      if (Date.now() >= deadline) return resolve(0);
+      setTimeout(tick, 150);
+    };
+    tick();
+  });
 }
 
 function stop() {
