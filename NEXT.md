@@ -27,6 +27,7 @@
 | 浮动小光 | `shell.overlay` 挂一个小光精灵（聪慧灵活版：亮眼/眨眼/眼珠跟鼠标/挑眉/歪头/呆毛/飞旋光轨/飘带），随机念短法义；间隔可设（关闭/3/5/10/20/30/60 分钟，默认 10）；49 段短法义逐字核对；设置存 localStorage |
 | 桌面浮窗 | `native/float.swift` 编译出独立 macOS 浮窗进程（`NSWindow.Level.floating`），DSH 最小化后仍显示；Host 工具 `xiaoguang_desktop` + 路由 `/api/dapusa/desktop-float`；实测 layer=3、右下锚定、随气泡自动缩放 |
 | 菜单栏 + 自动浮出 | 原生端 NSStatusItem 菜单（念一句/显示收起/随机间隔/自动浮出/退出）；插件加载 2.5 秒后按 `settings.json` 的 `autoStart` 自动拉起；DSH 重启后实测自动浮出、父进程为新 Host pid、`state.json` 里 `menuBar:true` |
+| Windows 桌面浮窗 | `native/float.ps1`（PowerShell + WinForms，无需编译器）：无边框 TopMost 窗口 + 托盘图标菜单 + 眼动/眨眼/随机念诵；Host 按平台分支（darwin→swiftc，win32→powershell.exe）。**本机是 macOS，未在真机 Windows 上验证**，待用户 Windows 实测 |
 | 左侧栏注册 | `Slots.listSubTree` 实测：`sidebar.panellist` 有 id `dsh-dapusa`（order 30）|
 | 主面板注册 | `Slots.listSubTree` 实测：`main` 有 key `dsh-dapusa` |
 | 模型通道 | `ctx.llm.stream`，**不需要任何外部 API key**；模型不可用自动退回纯词面检索 |
@@ -87,7 +88,11 @@ ctx.slots.inject('main', () => ctx.slots.register({
 - 形象与法义：与网页共用同一套设计语言（聪慧灵活版光之精灵）；法义来自 `data/quotes_float.json`（49 段，逐字核对）。
 - 原生端用 `TimelineView(.periodic 24fps) + Canvas` 现画：呼吸光晕、飞旋光轨、歪头摇摆、眨眼（4.6s 一次）、
   呆毛摆动、灵光球闪烁、眼珠跟着鼠标（NSEvent.mouseLocation，免辅助功能权限）——和网页版同一套动作语言。
-- 限制：仅 macOS（Windows/Linux 无此实现）；发布时要把预编译二进制随包（现在按需编译）。
+- 平台：macOS（Swift/AppKit，按需 swiftc 编译）+ Windows（PowerShell/WinForms，无需编译器）；
+  Linux 暂不支持。macOS 发布时要把预编译二进制随包（现在按需编译）。
+- Windows 侧实现要点：`powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File float.ps1`
+  + 参数（Quotes/Minutes/ParentPid/Settings/State）；窗口 `TopMost` + 无边框 + Region 圆角；
+  菜单用 NotifyIcon 托盘图标；日志写到缓存目录 `error.log`。
 
 ### 样式与页面约定
 
@@ -110,8 +115,8 @@ ctx.slots.inject('main', () => ctx.slots.register({
 4. **补全学法栏**：现在只有五面导读 + 七把标尺 + 七门功课；全量 6503 段未嵌入页面。
 5. **插件索引 JSON / npm publish**：包名 `dsh-dapusa`，索引格式查 `dsh-experimental-plugin-market-bundle`。
    桌面浮窗发布前要预编译 macOS 二进制（universal 或 arm64）随包，避免要求用户装 Xcode CLT。
-6. **桌面浮窗可再进化**：Windows/Linux 等价实现；`autoStart` 失败时的可见提示（现在失败只写进工具结果）。
-   开机自动浮出与菜单栏图标已在 v0.6.1 完成。
+6. **桌面浮窗可再进化**：Windows 真机验证与修 bug（本机无 Windows）；Linux 等价实现；
+   `autoStart` 失败时的可见提示（现在失败只写进工具结果）。开机自动浮出与菜单栏图标已在 v0.6.1 完成。
 
 ## 关键文件
 

@@ -12,25 +12,27 @@
 
 模型全部走 DSH 自己的模型通道（`ctx.llm`），**不需要任何外部 API key**；模型不可用时自动退回纯词面检索。
 
-## 桌面浮窗（macOS 原生，DSH 最小化也显示）
+## 桌面浮窗（原生窗口，DSH 最小化也显示；macOS / Windows）
 
 网页里的小光挂在 DSH 的 Web 层，DSH 一最小化就看不见了。桌面版是**另一个独立进程 + 原生窗口**：
 
-- 用 `native/float.swift`（SwiftUI + AppKit）画的小光，编译后是一个 `NSWindow.Level.floating` 窗口：
-  浮在所有普通窗口最上层、`canJoinAllSpaces`（切换桌面也都在），**与 DSH 窗口互不影响，DSH 最小化照常显示**。
+- **macOS**：`native/float.swift`（SwiftUI + AppKit）编译成一个 `NSWindow.Level.floating` 窗口，
+  浮在所有普通窗口最上层、`canJoinAllSpaces`（切换桌面也都在），DSH 最小化照常显示。
+- **Windows**：`native/float.ps1`（PowerShell + WinForms，**不需要编译器**）创建一个无边框、
+  `TopMost` 的原生窗口，同样浮在所有窗口最上层；菜单在系统托盘图标里。
 - 随机念短法义、点小光改间隔、换一句、退出——都在桌面窗口里完成。
-- **菜单栏图标**：念一句法义 / 显示·收起小光 / 随机间隔 / **DSH 启动时自动浮出** / 退出小光。
+- **菜单栏/托盘图标**：念一句法义 / 显示·收起小光 / 随机间隔 / **DSH 启动时自动浮出** / 退出小光。
 - **DSH 启动自动浮出**：默认开启。`settings.json` 里 `autoStart: true` 时，插件每次加载
   （DSH 启动或插件重载）会在 2.5 秒后自动把桌面小光拉起来；想关就从菜单栏或网页开关关掉。
 - 打开方式：跟小光/智能体说「打开桌面小光」（工具 `xiaoguang_desktop`），
   或点网页浮动小光的设置卡 →「桌面浮窗 → 打开」；自动浮出开关在同一张卡里。
-- 首次打开时用 `xcrun swiftc -O` 编译到 `~/.dsh/cache/dsh-dapusa/desktop-float/xiaoguang-float`
-  （本机约 2 秒；需要 Xcode Command Line Tools）。源码更新会自动重编。
+- macOS 首次打开时用 `xcrun swiftc -O` 编译到 `~/.dsh/cache/dsh-dapusa/desktop-float/xiaoguang-float`
+  （本机约 2 秒；需要 Xcode Command Line Tools）。Windows 直接运行 PowerShell 脚本，无需编译。
 - 生命周期：以 `--parent-pid <DSH Host pid>` 启动，DSH 退出后 5 秒内自退；
   pid 记录带父进程，DSH 重启后旧实例会被清掉、新实例由自动浮出接管，不会叠出两只。
 - 设置与状态（Host 与原生端共用）：`~/.dsh/cache/dsh-dapusa/desktop-float/settings.json`（自动浮出/间隔）、
   `state.json`（每 4 秒由原生端写入：窗口是否可见、菜单栏是否就绪）。
-- 限制：仅 macOS；发布到插件市场时需要预编译二进制（本机是按需编译）。
+- 限制：目前支持 macOS 与 Windows（Linux 暂不支持）；macOS 发布到插件市场时需要预编译二进制（本机是按需编译）。
 
 ## 浮动小光
 
@@ -132,8 +134,10 @@ git clone https://github.com/ruancl/dsh-dapusa.git
 
 - 插件装在当前 DSH profile，对所有会话生效；首次安装/升级后建议重启一次 DSH
 - 模型走 DSH 自己的模型通道，**不需要任何 API key**；模型不可用时自动退化为词面检索
-- **桌面浮窗（小光浮在桌面最上层）只支持 macOS**，需要装了 Xcode Command Line Tools
-  （首次自动用 `xcrun swiftc` 编译，约 2 秒）；「DSH 启动自动浮出」默认开，可在菜单栏或设置卡里关
+- **桌面浮窗（小光浮在桌面最上层）支持 macOS 和 Windows**：
+  macOS 需要 Xcode Command Line Tools（首次自动用 `xcrun swiftc` 编译，约 2 秒）；
+  Windows 用系统自带的 PowerShell，**不需要装任何编译工具**；
+  「DSH 启动自动浮出」默认开，可在菜单栏/托盘或设置卡里关
 - 公开仓库只带小光人格四件套（IDENTITY/SOUL/USER/RULES），**不带私人长期记忆**；
   想给它自己的记忆，在插件目录 `memory/MEMORY.md` 里写就行（格式照 `MEMORY.md` 条目）
 - 卸载：插件页找到 `dsh-dapusa` → 关闭 / 移除
@@ -157,11 +161,15 @@ git clone https://github.com/ruancl/dsh-dapusa.git
 - 左侧栏入口 / 主面板：`cordis_inspect_query` → `Slots.listSubTree` 已在实时页面确认。
 - 浮动小光：`shell.overlay` 实时确认有 id `dsh-dapusa-float`（order 40）；49 段短法义逐字核对通过。
   视觉与计时未截图验证（没有浏览器控制通道）。
-- 桌面浮窗：`xiaoguang_desktop start` 实测拉起进程；CGWindowList 核对窗口
+- 桌面浮窗（macOS）：`xiaoguang_desktop start` 实测拉起进程；CGWindowList 核对窗口
   `layer=3`（floating，浮层）、右下角锚定、念诵时随气泡自动缩放；stop 后进程与窗口都消失。
 - 自动浮出：DSH 重启后实测——桌面小光由插件自动拉起（父进程 = 新的 DSH Host pid），
   `state.json` 里 `menuBar: true`（菜单栏图标已创建）；改设置后运行中的原生端会在几秒内跟上。
   窗口/菜单栏视觉未截图验证。
+- 桌面浮窗（Windows）：`native/float.ps1` 已实现（PowerShell + WinForms，无边框 TopMost + 托盘菜单 +
+  眼动/眨眼/随机念诵），Host 端按平台分支（darwin 走 swiftc，win32 走 powershell.exe）；
+  **本机是 macOS，无法在 Windows 上实测**，需要在 Windows 上点一次「打开」验证，报错会写到
+  `~/.dsh/cache/dsh-dapusa/desktop-float/error.log` 并在设置卡里显示。
 
 ## 版权
 

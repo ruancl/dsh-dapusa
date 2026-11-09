@@ -22,8 +22,10 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const PLATFORM = process.platform;
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = join(HERE, 'native', 'float.swift');
+const PS_SCRIPT = join(HERE, 'native', 'float.ps1');
 const QUOTES = join(HERE, 'data', 'quotes_float.json');
 const CACHE_DIR = join(homedir(), '.dsh', 'cache', 'dsh-dapusa', 'desktop-float');
 const BINARY = join(CACHE_DIR, 'xiaoguang-float');
@@ -32,7 +34,7 @@ const QUOTES_COPY = join(CACHE_DIR, 'quotes.json');
 const SETTINGS_FILE = join(CACHE_DIR, 'settings.json');
 const STATE_FILE = join(CACHE_DIR, 'state.json');
 
-const DEFAULT_SETTINGS = { autoStart: true, minutes: 10 };
+const DEFAULT_SETTINGS = { autoStart: true, enabled: true, minutes: 10 };
 
 let building = null;
 
@@ -58,6 +60,7 @@ function readSettings() {
   const raw = readJson(SETTINGS_FILE);
   if (raw && typeof raw === 'object') {
     if (typeof raw.autoStart === 'boolean') settings.autoStart = raw.autoStart;
+    if (typeof raw.enabled === 'boolean') settings.enabled = raw.enabled;
     const minutes = Number(raw.minutes);
     if (Number.isFinite(minutes) && minutes > 0) settings.minutes = Math.min(minutes, 240);
   }
@@ -103,14 +106,18 @@ function runningPid() {
   return null;
 }
 
-/** 编译（必要时）并准备好运行资源 */
-function ensureBinary() {
+/** macOS：按需用 swiftc 编译原生浮窗（系统没装编译工具时给出可读提示） */
+function ensureDarwinRuntime() {
   if (building) return building;
   building = new Promise((resolve, reject) => {
     try {
       mkdirSync(CACHE_DIR, { recursive: true });
       if (!existsSync(SOURCE)) throw new Error('插件缺少 native/float.swift');
       if (!existsSync(QUOTES)) throw new Error('插件缺少 data/quotes_float.json');
+      const probe = spawnSync('xcrun', ['--version'], { encoding: 'utf8', timeout: 30000 });
+      if (probe.error || probe.status !== 0) {
+        throw new Error('没有找到 Xcode 命令行工具：请在终端运行 xcode-select --install 后再试');
+      }
       const stale = !existsSync(BINARY) || statSync(BINARY).mtimeMs < statSync(SOURCE).mtimeMs;
       if (stale) {
         const result = spawnSync('xcrun', ['swiftc', '-O', '-o', BINARY, SOURCE], {
@@ -134,26 +141,78 @@ function ensureBinary() {
   return building;
 }
 
+/** Windows：不需要编译，检查系统自带的 Windows PowerShell 与脚本是否存在 */
+function ensureWindowsRuntime() {
+  if (building) return building;
+  building = new Promise((resolve, reject) => {
+    try {
+      mkdirSync(CACHE_DIR, { recursive: true });
+      if (!existsSync(PS_SCRIPT)) throw new Error('插件缺少 native/float.ps1');
+      if (!existsSync(QUOTES)) throw new Error('插件缺少 data/quotes_float.json');
+      const probe = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '$PSVersionTable.PSVersion.Major'], {
+        encoding: 'utf8',
+        timeout: 30000,
+        windowsHide: true,
+      });
+      if (probe.error) throw new Error('找不到 powershell.exe：Windows 需要系统自带的 Windows PowerShell 才能显示桌面小光');
+      if (probe.status !== 0) {
+        const detail = String(probe.stderr || probe.stdout || '').trim().slice(0, 300);
+        throw new Error(`PowerShell 不可用：${detail || '请检查系统策略是否禁止运行 PowerShell 脚本'}`);
+      }
+      writeFileSync(QUOTES_COPY, readFileSync(QUOTES));
+      resolve(PS_SCRIPT);
+    } catch (error) {
+      reject(error);
+    } finally {
+      building = null;
+    }
+  });
+  return building;
+}
+
+function ensureRuntime() {
+  if (PLATFORM === 'darwin') return ensureDarwinRuntime();
+  if (PLATFORM === 'win32') return ensureWindowsRuntime();
+  return Promise.reject(new Error(`桌面浮窗目前只支持 macOS 和 Windows（当前系统：${PLATFORM}）`));
+}
+
 async function start(minutes) {
   const existing = runningPid();
   if (existing) return { ...desktopFloatStatus(), running: true, pid: existing, started: false };
   const settings = writeSettings(Number.isFinite(minutes) && minutes > 0 ? { minutes: Math.min(minutes, 240) } : {});
   try {
-    await ensureBinary();
+    await ensureRuntime();
   } catch (error) {
     return { running: false, error: String((error && error.message) || error), autoStart: settings.autoStart };
   }
-  const child = spawn(
-    BINARY,
-    [
-      '--quotes', QUOTES_COPY,
-      '--minutes', String(settings.minutes),
-      '--parent-pid', String(process.pid),
-      '--settings', SETTINGS_FILE,
-      '--state', STATE_FILE,
-    ],
-    { detached: true, stdio: 'ignore' },
-  );
+  let child;
+  if (PLATFORM === 'win32') {
+    child = spawn(
+      'powershell.exe',
+      [
+        '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+        '-File', PS_SCRIPT,
+        '-Quotes', QUOTES_COPY,
+        '-Minutes', String(settings.minutes),
+        '-ParentPid', String(process.pid),
+        '-Settings', SETTINGS_FILE,
+        '-State', STATE_FILE,
+      ],
+      { detached: true, windowsHide: true, stdio: 'ignore' },
+    );
+  } else {
+    child = spawn(
+      BINARY,
+      [
+        '--quotes', QUOTES_COPY,
+        '--minutes', String(settings.minutes),
+        '--parent-pid', String(process.pid),
+        '--settings', SETTINGS_FILE,
+        '--state', STATE_FILE,
+      ],
+      { detached: true, stdio: 'ignore' },
+    );
+  }
   child.unref();
   if (!child.pid) return { running: false, error: '桌面小光启动失败（没有进程 id）', autoStart: settings.autoStart };
   writeFileSync(PID_FILE, JSON.stringify({ pid: child.pid, parent: process.pid }));
@@ -168,6 +227,9 @@ function stop() {
   const pid = runningPid();
   if (!pid) return { running: false, stopped: false };
   try { process.kill(pid, 'SIGTERM'); } catch { /* 已经退出 */ }
+  if (PLATFORM === 'win32') {
+    try { spawnSync('taskkill', ['/PID', String(pid), '/F', '/T'], { timeout: 15000, windowsHide: true }); } catch { /* 已退出 */ }
+  }
   try { rmSync(PID_FILE, { force: true }); } catch { /* 清理失败无妨 */ }
   try { rmSync(STATE_FILE, { force: true }); } catch { /* 清理失败无妨 */ }
   return { running: false, stopped: true, pid };
@@ -182,6 +244,7 @@ export function desktopFloatStatus() {
     running: Boolean(pid),
     pid: pid || null,
     autoStart: settings.autoStart,
+    enabled: settings.enabled,
     minutes: settings.minutes,
     windowVisible: matches ? Boolean(state.windowVisible) : Boolean(pid),
     menuBar: matches ? Boolean(state.menuBar) : Boolean(pid),
@@ -227,8 +290,8 @@ function format(result, action) {
   if (result.running) {
     const auto = result.autoStart ? 'DSH 启动自动浮出：开' : 'DSH 启动自动浮出：关';
     return (
-      `桌面小光在跑（pid ${result.pid}）：独立 macOS 浮窗，浮在所有窗口最上层，DSH 最小化后仍显示。` +
-      `菜单栏有小光图标（念一句 / 收起 / 随机间隔 / 自动浮出 / 退出）。${auto}。`
+      `桌面小光在跑（pid ${result.pid}）：${PLATFORM === 'win32' ? 'Windows' : 'macOS'} 原生浮窗，浮在所有窗口最上层，DSH 最小化后仍显示。` +
+      `菜单栏/托盘有小光图标（念一句 / 收起 / 随机间隔 / 自动浮出 / 退出）。${auto}。`
     );
   }
   return `桌面小光当前没开（DSH 启动自动浮出：${result.autoStart ? '开' : '关'}）。可以说「打开桌面小光」来启动。`;
@@ -239,7 +302,7 @@ export function createDesktopTool() {
   return {
     name: 'xiaoguang_desktop',
     description:
-      '小光的桌面浮窗（macOS 原生窗口 + 菜单栏图标）：浮在所有窗口最上层，DSH 最小化后仍然显示，' +
+      '小光的桌面浮窗（macOS 原生窗口 / Windows 原生窗口）+ 菜单栏或托盘图标：浮在所有窗口最上层，DSH 最小化后仍然显示，' +
       '每隔一段随机时间念一句短法义。支持 DSH 启动时自动浮出。' +
       '当用户说"把小光放到桌面上 / 最小化也要看到小光 / 打开桌面小光 / 关掉桌面小光 / ' +
       '以后开机自动出现 / 不要自动出现"时使用。',
