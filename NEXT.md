@@ -114,7 +114,7 @@ ctx.slots.inject('main', () => ctx.slots.register({
    可在 `cordis.patch.yml` 加一行 `@deepseek-ai/dsh-agent-preset`（声明格式见
    `editing-cordis-compositions` 技能），persona 用随包记忆。
 4. **补全学法栏**：现在只有五面导读 + 七把标尺 + 七门功课；全量 6503 段未嵌入页面。
-5. **插件索引 JSON / npm publish**：包名 `dsh-dapusa`，索引格式查 `dsh-experimental-plugin-market-bundle`。
+5. **插件索引 JSON**：已完成——`market/index.json`（format 1，官方 `dsh-plugin-market-index` 校验通过），`scripts/make-market-index.mjs` 生成；用户把 raw/jsDelivr 地址加为 Discover 索引源即可安装。npm publish 仍未做（当前走 Git 源，不需要 npm）。
    桌面浮窗发布前要预编译 macOS 二进制（universal 或 arm64）随包，避免要求用户装 Xcode CLT。
 6. **桌面浮窗可再进化**：Windows 真机验证与修 bug（本机无 Windows）；Linux 等价实现；
    `autoStart` 失败时的可见提示（现在失败只写进工具结果）。开机自动浮出与菜单栏图标已在 v0.6.1 完成。

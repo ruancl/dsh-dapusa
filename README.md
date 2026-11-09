@@ -66,6 +66,8 @@ dsh-dapusa/
   skills/dapusa/    # 取法技能文档
   skills/xiaoguang/ # 小光技能文档
   assets/           # 小光精灵形象（全身 + 头像，webp/png）
+  market/index.json # 插件市场索引（format 1）
+  scripts/make-market-index.mjs # 生成/更新索引
   icon.webp         # 插件图标（精灵头像 256px）
   locale/{zh,en}.json  # 插件管理页显示用的 meta
   icon.svg
@@ -146,6 +148,36 @@ git clone https://github.com/ruancl/dsh-dapusa.git
 - 卸载：插件页找到 `dsh-dapusa` → 关闭 / 移除
 
 > 还没上 npm 和插件市场索引；以后会补 `npm publish` 和 Index JSON，那之后可以一键从市场装。
+
+## 从插件市场安装（索引源）
+
+DSH 插件市场是「索引源」模式：发布者提供一个 https 的索引 JSON，用户在自己的 DSH 里添加这个源，
+就能在 **插件 → 发现（Discover）** 里搜到并安装。
+
+**发布者（本仓库）**
+
+- 索引文件：[`market/index.json`](market/index.json)（format 1，用官方 `dsh-plugin-market-index` 校验通过）
+- 生成/更新：`node scripts/make-market-index.mjs`（取 `package.json` 的 version 和当前 git HEAD 作为 pin 的 commit）
+- 发版流程：改代码 → commit → `node scripts/make-market-index.mjs` → commit `market/index.json` → push
+
+**用户（把下面任一地址加为索引源）**
+
+1. 打开 **插件 → 发现（Discover）** → **Add index source**
+2. 填：
+
+   - GitHub raw：
+     ```
+     https://raw.githubusercontent.com/ruancl/dsh-dapusa/main/market/index.json
+     ```
+   - jsDelivr（国内通常更快）：
+     ```
+     https://cdn.jsdelivr.net/gh/ruancl/dsh-dapusa@main/market/index.json
+     ```
+
+3. 回到 Discover，搜「大菩萨实证法义」或 `dsh-dapusa` → **Install**
+4. 索引里 pin 的是具体 commit，装的就是那一版；插件升级还是「卸载 → 重装」
+
+> 索引源必须是无跳转的 https 最终地址（DSH 拒绝重定向）；索引会缓存 10 分钟，刚发版后点右上角刷新即可。
 
 ## 安装（本机开发）
 

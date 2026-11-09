@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Mahayana Bodhisattva Realization",
+    "zh": "大菩萨实证法义"
+  },
+  "description": {
+    "en": "Dharma Q&A drawn verbatim from the Holy Light teachings, a memory agent named Xiao Guang, a floating companion, and a desktop always-on-top light sprite.",
+    "zh": "依圣光临在开示取法：法义问答逐字引用原文、记忆智能体小光、网页浮动小光与桌面置顶精灵。"
+  },
+  "metadata": {
+    "categories": {
+      "dharma": {
+        "title": {
+          "en": "Dharma",
+          "zh": "修行"
+        }
+      }
+    },
+    "labels": {
+      "agent": {
+        "title": {
+          "en": "Agent",
+          "zh": "智能体"
+        }
+      },
+      "desktop": {
+        "title": {
+          "en": "Desktop",
+          "zh": "桌面"
+        }
+      }
+    }
+  },
+  "plugins": [
+    {
+      "name": "dsh-dapusa",
+      "title": {
+        "en": "Mahayana Bodhisattva Realization",
+        "zh": "大菩萨实证法义"
+      },
+      "description": {
+        "en": "Dharma Q&A with verbatim quotes, a memory agent, a floating Xiao Guang and a macOS/Windows always-on-top desktop sprite.",
+        "zh": "法义问答（原文逐字引用）+ 记忆智能体小光 + 网页浮动小光 + macOS/Windows 桌面置顶精灵。"
+      },
+      "icon": "icon.webp",
+      "author": "ruancl",
+      "homepage": "https://github.com/ruancl/dsh-dapusa",
+      "repository": {
+        "url": "https://github.com/ruancl/dsh-dapusa"
+      },
+      "metadata": {
+        "category": "dharma",
+        "keywords": [
+          "dsh",
+          "dharma",
+          "buddhism",
+          "xiaoguang",
+          "小光",
+          "法义"
+        ],
+        "labels": [
+          "agent",
+          "desktop"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.7.0",
+          "publishTimestamp": 1794215463,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/ruancl/dsh-dapusa",
+            "commit": "91c0635b9b904a949ad11c473e78eb4093ac70ec"
+          },
+          "engines": {
+            "dsh": ">=0.2.0-rc.1 <0.3.0"
+          }
+        }
+      ]
+    }
+  ]
+}
