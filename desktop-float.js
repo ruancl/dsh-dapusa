@@ -112,7 +112,7 @@ function runningPid() {
 /** macOS：按需用 swiftc 编译原生浮窗（系统没装编译工具时给出可读提示） */
 function ensureDarwinRuntime() {
   if (building) return building;
-  building = new Promise((resolve, reject) => {
+  const task = new Promise((resolve, reject) => {
     try {
       mkdirSync(CACHE_DIR, { recursive: true });
       if (!existsSync(SOURCE)) throw new Error('插件缺少 native/float.swift');
@@ -139,17 +139,18 @@ function ensureDarwinRuntime() {
       resolve(BINARY);
     } catch (error) {
       reject(error);
-    } finally {
-      building = null;
     }
   });
+  // 关键：等 Promise 真正结算后再清空缓存；否则会一直返回已完成的旧 Promise，
+  // 导致之后改了 native 源码 / 换了形象也不会重新编译、复制。
+  building = task.finally(() => { building = null; });
   return building;
 }
 
 /** Windows：不需要编译，检查系统自带的 Windows PowerShell 与脚本是否存在 */
 function ensureWindowsRuntime() {
   if (building) return building;
-  building = new Promise((resolve, reject) => {
+  const task = new Promise((resolve, reject) => {
     try {
       mkdirSync(CACHE_DIR, { recursive: true });
       if (!existsSync(PS_SCRIPT)) throw new Error('插件缺少 native/float.ps1');
@@ -170,10 +171,11 @@ function ensureWindowsRuntime() {
       resolve(PS_SCRIPT);
     } catch (error) {
       reject(error);
-    } finally {
-      building = null;
     }
   });
+  // 关键：等 Promise 真正结算后再清空缓存；否则会一直返回已完成的旧 Promise，
+  // 导致之后改了 native 源码 / 换了形象也不会重新编译、复制。
+  building = task.finally(() => { building = null; });
   return building;
 }
 
