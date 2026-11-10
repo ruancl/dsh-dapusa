@@ -66,12 +66,12 @@
       },
       "versions": [
         {
-          "version": "0.8.0",
-          "publishTimestamp": 1794290209,
+          "version": "0.8.1",
+          "publishTimestamp": 1794292743,
           "source": {
             "type": "git",
             "url": "https://github.com/ruancl/dsh-dapusa",
-            "commit": "ee13584315b3b3f5602e6ec68c1b22a88f898759"
+            "commit": "56a1926ad935d72e4c193874622ee179fe5aacf2"
           },
           "engines": {
             "dsh": ">=0.2.0-rc.1 <0.3.0"
