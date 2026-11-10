@@ -37,6 +37,8 @@ final class Model: ObservableObject {
     @Published var enabled: Bool
     @Published var minutes: Int
     var layoutHandler: (() -> Void)?
+    var onDrag: ((CGSize) -> Void)?
+    var onDragEnd: (() -> Void)?
 
     private var lastText = ""
     private var showTimer: Timer?
@@ -504,11 +506,15 @@ struct RootView: View {
                             onNext: { model.showQuote() },
                             onHide: { model.hideBubble() })
             }
-            Button(action: { model.togglePanel() }) {
-                XiaoGuangFigure(size: 84)
-            }
-            .buttonStyle(.plain)
-            .help("小光 · 点一下，听一句法义")
+            XiaoGuangFigure(size: 84)
+                .contentShape(Rectangle())
+                .onTapGesture { model.togglePanel() }
+                .gesture(
+                    DragGesture(minimumDistance: 4)
+                        .onChanged { value in model.onDrag?(value.translation) }
+                        .onEnded { _ in model.onDragEnd?() }
+                )
+                .help("小光 · 点一下设置 / 按住拖到任意位置")
         }
         .padding(14)
         .fixedSize()
@@ -558,6 +564,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var stateURL: URL?
     private var parentPID: Int32 = 0
     private var stateTimer: Timer?
+    private var anchorPoint: NSPoint = .zero
+    private var dragBase: NSPoint = .zero
+    private var dragging = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let args = CommandLine.arguments
@@ -606,6 +615,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         self.host = host
         self.panel = panel
         model.layoutHandler = { [weak self] in self?.resize() }
+        model.onDrag = { [weak self] translation in self?.dragWindow(translation) }
+        model.onDragEnd = { [weak self] in self?.finishDrag() }
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "xg.anchor.x") != nil, defaults.object(forKey: "xg.anchor.y") != nil {
+            anchorPoint = NSPoint(x: defaults.double(forKey: "xg.anchor.x"), y: defaults.double(forKey: "xg.anchor.y"))
+        } else {
+            let screen = NSScreen.main ?? NSScreen.screens.first
+            let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+            anchorPoint = NSPoint(x: visible.maxX - 22, y: visible.minY + 24)
+        }
+        clampAnchor()
         resize()
         panel.orderFrontRegardless()
 
@@ -781,11 +801,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             host.layoutSubtreeIfNeeded()
             let size = host.fittingSize
             guard size.width > 1, size.height > 1 else { return }
-            let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens.first
-            let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-            let origin = NSPoint(x: visible.maxX - size.width - 22, y: visible.minY + 24)
+            let origin = NSPoint(x: self.anchorPoint.x - size.width, y: self.anchorPoint.y)
             panel.setFrame(NSRect(origin: origin, size: size), display: true)
         }
+    }
+
+    /// 锚点是窗口右下角：拖动时整体跟随，同时保证窗口留在屏幕内
+    private func dragWindow(_ translation: CGSize) {
+        guard let panel = self.panel else { return }
+        if !dragging {
+            dragging = true
+            dragBase = anchorPoint
+        }
+        anchorPoint = NSPoint(x: dragBase.x + translation.width, y: dragBase.y - translation.height)
+        clampAnchor()
+        let size = panel.frame.size
+        panel.setFrame(NSRect(x: anchorPoint.x - size.width, y: anchorPoint.y, width: size.width, height: size.height), display: true)
+    }
+
+    private func finishDrag() {
+        dragging = false
+        let defaults = UserDefaults.standard
+        defaults.set(anchorPoint.x, forKey: "xg.anchor.x")
+        defaults.set(anchorPoint.y, forKey: "xg.anchor.y")
+    }
+
+    private func clampAnchor() {
+        guard let panel = self.panel else { return }
+        let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens.first
+        let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let size = panel.frame.size
+        let minX = visible.minX + size.width + 4
+        let maxX = visible.maxX - 4
+        let minY = visible.minY + 4
+        let maxY = visible.maxY - 4
+        anchorPoint = NSPoint(
+            x: min(max(anchorPoint.x, minX), maxX),
+            y: min(max(anchorPoint.y, minY), maxY)
+        )
     }
 }
 

@@ -77,6 +77,10 @@ $script:BtnNextRect = $null
 $script:BtnHideRect = $null
 $script:SettingsMtime = 0
 $script:FigureImage = $null
+$script:AnchorX = $null
+$script:AnchorY = $null
+$script:PositionFile = $null
+if ($State) { $script:PositionFile = Join-Path ([System.IO.Path]::GetDirectoryName($State)) 'position.json' }
 
 function Log-Error {
     param($ErrorRecord)
@@ -498,6 +502,34 @@ function Draw-All {
 }
 
 # ---------------- 窗口行为 ----------------
+function Load-Position {
+    if (-not $script:PositionFile) { return }
+    $pos = Read-JsonFile $script:PositionFile
+    if ($null -ne $pos -and $null -ne $pos.x -and $null -ne $pos.y) {
+        $script:AnchorX = [double]$pos.x
+        $script:AnchorY = [double]$pos.y
+    }
+}
+
+function Save-Position {
+    if (-not $script:PositionFile -or $null -eq $script:AnchorX) { return }
+    Write-JsonFile $script:PositionFile @{ x = [double]$script:AnchorX; y = [double]$script:AnchorY }
+}
+
+function Clamp-Anchors {
+    param([double]$W, [double]$H, $Wa)
+    if ($null -eq $script:AnchorX) {
+        $script:AnchorX = $Wa.Right - 26 * $script:Scale
+        $script:AnchorY = $Wa.Bottom - 26 * $script:Scale
+    }
+    $minX = $Wa.Left + $W + 4
+    $maxX = $Wa.Right - 4
+    $minY = $Wa.Top + $H + 4
+    $maxY = $Wa.Bottom - 4
+    $script:AnchorX = [math]::Min([math]::Max($script:AnchorX, $minX), $maxX)
+    $script:AnchorY = [math]::Min([math]::Max($script:AnchorY, $minY), $maxY)
+}
+
 function Layout-For {
     param([bool]$Bubble)
     $screen = [System.Windows.Forms.Screen]::PrimaryScreen
@@ -506,7 +538,8 @@ function Layout-For {
     $s = $script:Scale
     if ($Bubble) { $w = 380 * $s; $h = 348 * $s } else { $w = 150 * $s; $h = 150 * $s }
     $script:Form.Size = [System.Drawing.Size]::new([int]$w, [int]$h)
-    $script:Form.Location = [System.Drawing.Point]::new([int]($wa.Right - $w - 26 * $s), [int]($wa.Bottom - $h - 26 * $s))
+    Clamp-Anchors $w $h $wa
+    $script:Form.Location = [System.Drawing.Point]::new([int]($script:AnchorX - $w), [int]($script:AnchorY - $h))
     try {
         $regionPath = New-RoundRect 0 0 ([single]$w) ([single]$h) ([single](18 * $s))
         $region = [System.Drawing.Region]::new($regionPath)
@@ -712,10 +745,16 @@ try {
             if ([math]::Abs($dx) -gt 3 -or [math]::Abs($dy) -gt 3) {
                 $script:Dragged = $true
                 $script:Form.Location = [System.Drawing.Point]::new(($script:DragWin.X + $dx), ($script:DragWin.Y + $dy))
+                $script:AnchorX = $script:Form.Location.X + $script:Form.Width
+                $script:AnchorY = $script:Form.Location.Y + $script:Form.Height
             }
         }
     }.GetNewClosure())
-    $script:Form.Add_MouseUp({ param($s, $e) $script:Dragging = $false }.GetNewClosure())
+    $script:Form.Add_MouseUp({
+        param($s, $e)
+        $script:Dragging = $false
+        if ($script:Dragged) { Save-Position }
+    }.GetNewClosure())
     $script:Form.Add_FormClosing({
         param($s, $e)
         if (-not $script:Quitting) { $e.Cancel = $true; $script:Form.Hide(); Write-State }
@@ -781,6 +820,7 @@ try {
         $script:WatchTimer.Start()
     }
 
+    Load-Position
     Layout-For $false
     $script:Form.Show()
     $script:Form.TopMost = $true

@@ -2,7 +2,7 @@
 
 > 给「创造模式」新会话。工作区 `/Users/brown/Desktop/holybless_0727`。
 > 展示名：**大菩萨实证法义**（npm 包名仍是 `dsh-dapusa`，改名只动显示名，不动安装 id）。
-> 插件包在 `dsh-dapusa/`，已 link 安装到 desktop profile 并启用（v0.7.0）。
+> 插件包在 `dsh-dapusa/`，已 link 安装到 desktop profile 并启用（v0.8.0）。
 > 改代码后：`plugin_manager set_bundle dsh-dapusa enabled=false → true`，HMR 会同时替换
 > Host 模块和客户端模块，**不用重启 DSH**（已实测）。
 
@@ -15,7 +15,7 @@
 
 | 项 | 状态 |
 |---|---|
-| `dsh-dapusa` 插件包 | 已 link 安装、已启用（desktop profile），v0.7.0 |
+| `dsh-dapusa` 插件包 | 已 link 安装、已启用（desktop profile），v0.8.0 |
 | 取法引擎 `engine.js` | JS 移植，6503 段，加载 186ms；Host 内共享单例 |
 | `practice_ask` 工具 | 已注册；取法 / 拦截验证类问题实测正常 |
 | `xiaoguang_ask` 工具 | 已注册并实测：正常问题取到 3 段整段原文 + 功课；验证类问题走确定性拦截 |
@@ -64,10 +64,13 @@ ctx.slots.inject('main', () => ctx.slots.register({
   气泡 / 设置卡自己 `pointer-events:auto`，所以不会挡住应用。
 - 计时：首次 15–45 秒后出现；之后每次间隔 = 设定分钟 × (0.6–1.4) 随机，最短 45 秒；
   每次显示约 26 秒自动收起。悬停/点击会打开设置卡（间隔切换、现在念一句）。
-- 形象：用用户提供的精灵图（`assets/xiaoguang.png` 全身 / `assets/xiaoguang-avatar.webp` 头像，
+- 形象：用用户提供的精灵图（蓝白小精灵，`assets/xiaoguang.png` 全身 / `xiaoguang-avatar.webp` 头像，
   插件图标 `icon.webp`）。网页浮动小光/页头/侧栏用图片 + CSS 漂浮/呼吸光晕；
   原生端（Swift / PowerShell）通过 Host 复制到缓存的 `figure.png` 加载，外面加光晕与轻微浮动。
   旧的 SVG 手绘版（`DrawnXiaoGuangFigure` / PS 的 Draw-Figure）保留为图片缺失时的兜底。
+- 拖动：网页小光是 `position:fixed` + Pointer 拖动，位置存 localStorage；气泡/设置卡跟着走，
+  靠近顶部自动改到下方。macOS 窗口用 SwiftUI DragGesture 移动，锚点存 UserDefaults；
+  Windows 窗口拖动存 `position.json`。
 - 短法义池在 `client.js` 的 `FLOAT_QUOTES`（49 段，逐字取自 practice_core.json，脚本核对过）。
 - 想扩大法义池：从 `data/practice_core.json` 里按「42–76 字、非问答、无引号、非对话」过滤后加入。
 
@@ -123,7 +126,7 @@ ctx.slots.inject('main', () => ctx.slots.register({
 
 ```
 dsh-dapusa/
-  package.json      # v0.7.0；dsh.bundle + dsh.client（locale / ui-layout / ui-sidebar）
+  package.json      # v0.8.0；dsh.bundle + dsh.client（locale / ui-layout / ui-sidebar）
   cordis.patch.yml  # insert id: dapusa
   index.js          # Host：practice_ask / xiaoguang_ask + /api/dapusa/chat
   engine.js         # 取法引擎 + sharedEngine()
