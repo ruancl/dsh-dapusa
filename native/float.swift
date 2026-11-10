@@ -506,7 +506,7 @@ struct RootView: View {
                             onNext: { model.showQuote() },
                             onHide: { model.hideBubble() })
             }
-            XiaoGuangFigure(size: 84)
+            XiaoGuangFigure(size: 78)
                 .contentShape(Rectangle())
                 .onTapGesture { model.togglePanel() }
                 .gesture(
@@ -621,7 +621,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if defaults.object(forKey: "xg.anchor.x") != nil, defaults.object(forKey: "xg.anchor.y") != nil {
             anchorPoint = NSPoint(x: defaults.double(forKey: "xg.anchor.x"), y: defaults.double(forKey: "xg.anchor.y"))
         } else {
-            let screen = NSScreen.main ?? NSScreen.screens.first
+            // 默认放在主屏右下角（多显示器时不要跟着“当前焦点屏”乱跑）
+            let screen = NSScreen.screens.first ?? NSScreen.main
             let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
             anchorPoint = NSPoint(x: visible.maxX - 22, y: visible.minY + 24)
         }
@@ -828,13 +829,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func clampAnchor() {
         guard let panel = self.panel else { return }
-        let screen = panel.screen ?? NSScreen.main ?? NSScreen.screens.first
+        let screen = panel.screen ?? NSScreen.screens.first ?? NSScreen.main
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let size = panel.frame.size
+        // 锚点是窗口右下角：origin = (anchor.x - w, anchor.y)
+        // 所以要保证窗口完整留在屏幕内：anchor.y 最大只能到「屏幕上沿 - 高度」
         let minX = visible.minX + size.width + 4
         let maxX = visible.maxX - 4
         let minY = visible.minY + 4
-        let maxY = visible.maxY - 4
+        let maxY = visible.maxY - size.height - 4
         anchorPoint = NSPoint(
             x: min(max(anchorPoint.x, minX), maxX),
             y: min(max(anchorPoint.y, minY), maxY)

@@ -2,7 +2,7 @@
 
 > 给「创造模式」新会话。工作区 `/Users/brown/Desktop/holybless_0727`。
 > 展示名：**大菩萨实证法义**（npm 包名仍是 `dsh-dapusa`，改名只动显示名，不动安装 id）。
-> 插件包在 `dsh-dapusa/`，已 link 安装到 desktop profile 并启用（v0.8.0）。
+> 插件包在 `dsh-dapusa/`，已 link 安装到 desktop profile 并启用（v0.8.1）。
 > 改代码后：`plugin_manager set_bundle dsh-dapusa enabled=false → true`，HMR 会同时替换
 > Host 模块和客户端模块，**不用重启 DSH**（已实测）。
 
@@ -15,7 +15,7 @@
 
 | 项 | 状态 |
 |---|---|
-| `dsh-dapusa` 插件包 | 已 link 安装、已启用（desktop profile），v0.8.0 |
+| `dsh-dapusa` 插件包 | 已 link 安装、已启用（desktop profile），v0.8.1 |
 | 取法引擎 `engine.js` | JS 移植，6503 段，加载 186ms；Host 内共享单例 |
 | `practice_ask` 工具 | 已注册；取法 / 拦截验证类问题实测正常 |
 | `xiaoguang_ask` 工具 | 已注册并实测：正常问题取到 3 段整段原文 + 功课；验证类问题走确定性拦截 |
@@ -126,7 +126,7 @@ ctx.slots.inject('main', () => ctx.slots.register({
 
 ```
 dsh-dapusa/
-  package.json      # v0.8.0；dsh.bundle + dsh.client（locale / ui-layout / ui-sidebar）
+  package.json      # v0.8.1；dsh.bundle + dsh.client（locale / ui-layout / ui-sidebar）
   cordis.patch.yml  # insert id: dapusa
   index.js          # Host：practice_ask / xiaoguang_ask + /api/dapusa/chat
   engine.js         # 取法引擎 + sharedEngine()

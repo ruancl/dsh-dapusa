@@ -480,7 +480,7 @@ function Draw-All {
         Draw-Pill $g $script:BtnHideRect.X $script:BtnHideRect.Y $script:BtnHideRect.Width $script:BtnHideRect.Height '隐藏' $script:FontButton
     }
 
-    $figSize = 110.0
+    $figSize = 98.0
     $scale = $figSize / 64.0
     $fx = $w - $figSize - 14
     $fy = $h - $figSize - 10

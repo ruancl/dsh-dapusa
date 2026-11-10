@@ -1,6 +1,6 @@
 {
   "name": "dsh-dapusa",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "大菩萨实证法义 — 依圣光临在开示取法：左侧栏「学法 / 实修 / 问小光」页面；浮在界面上的小光（精灵形象）随机念一句短法义（间隔可设）；另外提供桌面浮窗版小光（macOS 原生窗口 / Windows PowerShell 原生窗口）——浮在所有窗口最上层，DSH 最小化后仍显示；内置记忆智能体小光（人格与记忆随包），法义问答逐字引用原文并附《篇名》日期；对话中另有 practice_ask / xiaoguang_ask / xiaoguang_desktop 工具。原文一字不改，不判定境界。",
   "type": "module",
   "icon": "./icon.webp",
